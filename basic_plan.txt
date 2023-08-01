@@ -1,0 +1,137 @@
+this is a second attempt at the TaskQueue module initially partially written (as a sub module of the clippy2000 project - which will be revisited later) in december of last year
+since then I've learned a bit, and now want to reapproach this with better structure and planning
+
+Goal: Create a module using TDD which allows a user/developer to call a TQ sequence of built-in functions, load custom functions into the module and call them too as well as view info about the available functions.
+
+The basic API usage should be something as follows (module name tbc):
+
+import TQV2 as TQ
+
+# call a squence of builtin functions:
+
+output = TQ.run(sequence=[('SPLIT,'-'),'FOREACH',('REPLACE','X','Y'),ENDFOR],input=text_blob)
+
+
+# load custom functions into module:
+
+TQ.load([
+            {
+                name: 'unique_string_name_of_function'
+                func: function_object_or_reference,
+                input_types: [], # allowed types of inputs i.e. text, list items etc
+                params: ['str','int'] # number and types of parameters the function takes (in addition to the input to be processed in the step)
+            },
+        ]
+    )
+
+
+The end user should be able to save the actual TQ sequences in a simple text file using the simple format of a command per line and params following the stepname separated by commas
+
+e.g.
+
+SPLIT,-
+FOREACH
+REPLACE,X,Y
+ENDFOR
+
+as such, there should also be a TQ.read_sequence() method which can take in such a file and converts it to a correctly formatted sequnce list for TQ.run to recieve
+
+how we handle commas will need to be decided, pehaps using the escape syntax of \ as used aleady in python and many other languages..?
+Or we could use quotes but then how do we handle quotes?
+
+I think the first of the two above options combined with regex to do the splitting of the line would be best, one regex to find sections between only commas, but not splitting on a comma preceded immediately by a single \ - double \\ then of course escaping the \ and meaning a following comma would be treated as a separator
+
+
+==========================================================================
+
+leaving the above to show thought process develop (as this is a working progress) but new thought is to make use be based around importing a class and not the module holisticly to allow multiple independant instances of a TaskQueue worker
+
+new usage would be as follows:
+
+
+# Python pseudo code begin...
+
+from tqv2 import TaskQueue as TQ
+
+mod = TQ.loadModule('modulename')
+
+myTaskQueueHandler = TQ(modifer = mod)
+
+myTaskQueueHandler.run(sequence=[('SPLIT,'-'),'FOREACH',('REPLACE','X','Y'),ENDFOR],input=text_blob)
+
+# end Python pseduocode ---------------------------------------------------
+
+
+
+The sequence param should accept either a list of strings and tuples or a sequence object for example created from parsing a text file or dictionary
+
+
+
+
+
+Ideas for library names:
+
+TaskQueue (there are a bunch of taskqueue variations on PyPi)
+tqv2
+taskseqpy (task sequencer) (there is a taskseq)
+pytaskseq (task sequencer)
+NOT pyqueue - this is taken with a reasonably professional looking project
+
+
+
+
+****************************************************************************
+
+Function formatting rules for task steps:
+
+Examples of valid functions:
+
+def test_func() -> None:
+    """Name: TestFunc; Description: This is the test function"""
+
+    print('The basic test passed!')
+    return None
+
+def test_func2(text_to_process: str | None = None) -> None:
+    """Name: TestFunc; Description: This is the test function"""
+
+    print('The basic test passed!')
+    return None
+
+def test_func2(text_to_process: str | None = None, params = ['a']) -> None:
+    """Name: TestFunc; Description: This is the test function"""
+
+    print('The basic test passed!')
+    return None
+
+def test_func2(image_to_process: tqv2.ImageClass | None = None, params = ['a']) -> None:
+    """Name: TestFunc; Description: This is the test function"""
+
+    print('The basic test passed!')
+    return None
+
+# obviously any custom types of the processable object would need to be defined and supported
+# we'll start with basic strings (no need to create a class for that of course) and move on to future alternative types
+# such as images for image manipulation tasks, tables for tabley stuff...
+# and when nothing is being processed, just actions sequenced, all of the available processable parameters would simply be None (their default values)
+
+
+taking our call_task method from previous version, we can replace the colon splitting with the use of tuples passed in to the function
+(ref lines 146-164 of user_conf of clippy2000)
+
+we would be passing in something like:
+
+    step = ('FunctionDoesAThing', 'T', 'Example') where the function always is at index 0
+    
+the caller then simply calls:
+
+     step[0](list(step[1:]))
+
+
+
+------------------------------------------------------------------------------------------
+
+An important note (in this stream of consiousness pre-README planning file) - with reference to the above, the library usage is really broken into two domains:
+
+- use of the TaskQueue class, its methods and other module level functions, dataclasses etc
+- syntax guide for creating custom step functions (naming tbc), as though I hope to include a versatile range of built-in functions for this, the power of this package as a library would be extensibility

@@ -1,0 +1,7 @@
+[project]
+name = "tqv2"
+version = "0.0.1"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
